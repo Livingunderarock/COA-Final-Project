@@ -10,15 +10,27 @@
 
   body {
     font-family: var(--font-sans);
-    background-color: #050505;
+    background-color: #030303;
     color: #f5f5f5;
     background-image:
-      radial-gradient(rgba(255, 255, 255, 0.055) 1px, transparent 1px),
-      linear-gradient(180deg, rgba(255, 255, 255, 0.025) 0%, transparent 240px);
-    background-size: 24px 24px, 100% 100%;
+      radial-gradient(ellipse 80% 42% at 50% -8%, rgba(255, 255, 255, 0.085), transparent 72%),
+      radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.015) 0%, transparent 320px);
+    background-size: 100% 100%, 28px 28px, 100% 100%;
     min-height: 100vh;
     overflow-x: hidden;
   }
+}
+
+/* Subtle architectural film grain overlay */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 60;
+  opacity: 0.028;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 .font-mono-tech {
@@ -30,71 +42,127 @@
   font-family: var(--font-display);
 }
 
-/* Monochrome architectural surface */
+/* Machined monochrome anodized panel with subtle specular rim */
 .hw-panel {
-  background: linear-gradient(180deg, #0d0d0d 0%, #090909 100%);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  position: relative;
+  background: linear-gradient(180deg, rgba(18, 18, 18, 0.94) 0%, rgba(9, 9, 9, 0.98) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.11);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.06),
-    0 12px 32px rgba(0, 0, 0, 0.65);
+    inset 0 1px 0 rgba(255, 255, 255, 0.09),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.7),
+    0 20px 50px rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(12px);
+}
+
+/* Precision Swiss crosshair corner accents */
+.hw-reticle {
+  position: relative;
+}
+
+.hw-reticle::before,
+.hw-reticle::after {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  pointer-events: none;
+  transition: border-color 0.3s ease;
+}
+
+.hw-reticle::before {
+  top: -1px;
+  left: -1px;
+  border-top: 1.5px solid rgba(255, 255, 255, 0.38);
+  border-left: 1.5px solid rgba(255, 255, 255, 0.38);
+}
+
+.hw-reticle::after {
+  bottom: -1px;
+  right: -1px;
+  border-bottom: 1.5px solid rgba(255, 255, 255, 0.38);
+  border-right: 1.5px solid rgba(255, 255, 255, 0.38);
 }
 
 .hw-card {
-  background: #0b0b0b;
+  background: linear-gradient(180deg, #0f0f0f 0%, #090909 100%);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
-/* Luminous monochrome highlights */
-.glow-white-sm {
-  box-shadow: 0 0 10px rgba(255, 255, 255, 0.28);
+/* Monochrome physical LED illumination */
+.led-on {
+  background: linear-gradient(180deg, #ffffff 0%, #e5e5e5 100%);
+  color: #050505;
+  border-color: #ffffff;
+  box-shadow:
+    0 0 22px rgba(255, 255, 255, 0.55),
+    0 0 6px rgba(255, 255, 255, 0.85),
+    inset 0 1px 0 #ffffff;
 }
 
-.glow-white-md {
-  box-shadow: 0 0 18px rgba(255, 255, 255, 0.42), inset 0 0 6px rgba(255, 255, 255, 0.2);
-}
-
-.glow-white-ring {
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.85), 0 0 16px rgba(255, 255, 255, 0.26);
+.led-off {
+  background: linear-gradient(180deg, #0b0b0b 0%, #050505 100%);
+  color: #404040;
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.85);
 }
 
 /* Monochrome technical hazard stripe for hardware faults */
 .hazard-stripe-bw {
   background-image: repeating-linear-gradient(
     -45deg,
-    rgba(255, 255, 255, 0.92) 0px,
-    rgba(255, 255, 255, 0.92) 6px,
-    rgba(10, 10, 10, 1) 6px,
-    rgba(10, 10, 10, 1) 12px
+    rgba(255, 255, 255, 0.96) 0px,
+    rgba(255, 255, 255, 0.96) 7px,
+    rgba(6, 6, 6, 1) 7px,
+    rgba(6, 6, 6, 1) 14px
   );
+  background-size: 20px 20px;
+  animation: hazard-scroll 1.6s linear infinite;
 }
 
-/* Subtle scanline texture for CRT / oscilloscope feel */
+@keyframes hazard-scroll {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 20px 0;
+  }
+}
+
+/* Subtle oscilloscope scanlines */
 .scanlines {
   background-image: linear-gradient(
-    rgba(255, 255, 255, 0.025) 50%,
+    rgba(255, 255, 255, 0.03) 50%,
     transparent 50%
   );
-  background-size: 100% 4px;
+  background-size: 100% 3px;
 }
 
+/* Active glowing hardware pulse */
 @keyframes pulse-monochrome {
   0%, 100% {
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.8), 0 0 16px rgba(255, 255, 255, 0.28);
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.88),
+      0 0 22px rgba(255, 255, 255, 0.28),
+      inset 0 1px 0 rgba(255, 255, 255, 0.25);
   }
   50% {
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.4), 0 0 6px rgba(255, 255, 255, 0.1);
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.45),
+      0 0 8px rgba(255, 255, 255, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.12);
   }
 }
 
 .animate-hw-pulse {
-  animation: pulse-monochrome 1.6s ease-in-out infinite;
+  animation: pulse-monochrome 1.5s ease-in-out infinite;
 }
 
+/* Carry ripple cascade */
 @keyframes carry-ripple {
   0% {
     opacity: 0;
-    transform: translateY(4px) scale(0.95);
+    transform: translateY(5px) scale(0.92);
   }
   100% {
     opacity: 1;
@@ -103,33 +171,85 @@
 }
 
 .animate-carry-step {
-  animation: carry-ripple 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: carry-ripple 0.36s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-/* Custom minimal monochrome scrollbar */
+/* LED bit flip pop */
+@keyframes bit-ignite {
+  0% {
+    transform: scale(0.92);
+    filter: brightness(1.4);
+  }
+  60% {
+    transform: scale(1.04);
+  }
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+}
+
+.animate-bit-ignite {
+  animation: bit-ignite 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* SVG traveling electrical signal packet */
+@keyframes bus-flow {
+  0% {
+    stroke-dashoffset: 32;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+.animate-bus-flow {
+  stroke-dasharray: 6 10;
+  animation: bus-flow 0.75s linear infinite;
+}
+
+.animate-bus-flow-reverse {
+  stroke-dasharray: 6 10;
+  animation: bus-flow 0.75s linear infinite reverse;
+}
+
+/* Ring 0 top energy beam */
+.kernel-beam {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.25) 18%,
+    rgba(255, 255, 255, 0.98) 50%,
+    rgba(255, 255, 255, 0.25) 82%,
+    transparent 100%
+  );
+  box-shadow: 0 0 18px rgba(255, 255, 255, 0.75);
+}
+
+/* Minimal monochrome scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #080808;
+  background: #060606;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.18);
-  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.38);
 }
 
-/* Monochrome range slider */
+/* Tactile monochrome hardware slider */
 input[type="range"].mono-slider {
   -webkit-appearance: none;
   appearance: none;
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.16);
   height: 2px;
   border-radius: 999px;
   outline: none;
@@ -138,21 +258,26 @@ input[type="range"].mono-slider {
 input[type="range"].mono-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 11px;
-  height: 11px;
+  width: 12px;
+  height: 12px;
   border-radius: 999px;
   background: #ffffff;
-  border: 1.5px solid #000000;
-  box-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
+  border: 2px solid #050505;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
   cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+input[type="range"].mono-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.18);
 }
 
 input[type="range"].mono-slider::-moz-range-thumb {
-  width: 11px;
-  height: 11px;
+  width: 12px;
+  height: 12px;
   border-radius: 999px;
   background: #ffffff;
-  border: 1.5px solid #000000;
-  box-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
+  border: 2px solid #050505;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
   cursor: pointer;
 }

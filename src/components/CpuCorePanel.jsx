@@ -30,7 +30,7 @@ function CoaTooltip({ code, children, align = 'center' }) {
       {children}
       <div
         role="tooltip"
-        className={`pointer-events-none absolute bottom-full z-40 mb-2 w-60 rounded-md border border-white/30 bg-black/95 p-2.5 opacity-0 shadow-[0_8px_28px_rgba(0,0,0,0.9)] backdrop-blur-md transition-all duration-150 group-hover/tip:pointer-events-auto group-hover/tip:opacity-100 ${alignClasses}`}
+        className={`pointer-events-none absolute bottom-full z-50 mb-2 w-60 rounded-md border border-white/30 bg-black/95 p-2.5 opacity-0 shadow-[0_12px_32px_rgba(0,0,0,0.95)] backdrop-blur-md transition-all duration-150 group-hover/tip:pointer-events-auto group-hover/tip:opacity-100 ${alignClasses}`}
       >
         <div className="flex items-center justify-between border-b border-white/15 pb-1">
           <span className="font-mono-tech text-[11px] font-bold tracking-wider text-white">
@@ -48,13 +48,145 @@ function CoaTooltip({ code, children, align = 'center' }) {
   );
 }
 
+function LogicAnalyzerWaveform({ value, regName }) {
+  const bits = BIT_POSITIONS_DESC.map((pos) => (value >>> pos) & 1);
+  const segWidth = 40;
+  const highY = 4;
+  const lowY = 18;
+
+  // Build orthogonal digital square-wave path across 8 bit intervals (320px wide)
+  let d = '';
+  bits.forEach((bit, idx) => {
+    const xStart = idx * segWidth;
+    const xEnd = xStart + segWidth;
+    const y = bit === 1 ? highY : lowY;
+    if (idx === 0) {
+      d += `M ${xStart} ${y} L ${xEnd} ${y}`;
+    } else {
+      const prevY = bits[idx - 1] === 1 ? highY : lowY;
+      if (prevY !== y) {
+        d += ` L ${xStart} ${y}`;
+      }
+      d += ` L ${xEnd} ${y}`;
+    }
+  });
+
+  const filterId = `wave-glow-${regName}`;
+
+  return (
+    <div className="mt-2.5 rounded border border-white/10 bg-[#050505] px-2 py-1.5">
+      <div className="mb-1 flex items-center justify-between font-mono-tech text-[8px] tracking-widest text-neutral-500 uppercase">
+        <span>LOGIC ANALYZER // {regName}[7..0]</span>
+        <span>HI=5V / LO=0V</span>
+      </div>
+      <svg
+        viewBox="0 0 320 22"
+        className="h-5 w-full overflow-visible"
+        role="img"
+        aria-label={`${regName} 8-bit square waveform`}
+      >
+        <defs>
+          <filter id={filterId} x="-15%" y="-40%" width="130%" height="180%">
+            <feGaussianBlur stdDeviation="1.6" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+
+        {/* Reference rail baselines */}
+        <line x1="0" y1={highY} x2="320" y2={highY} stroke="rgba(255,255,255,0.06)" strokeWidth="0.6" />
+        <line x1="0" y1={lowY} x2="320" y2={lowY} stroke="rgba(255,255,255,0.06)" strokeWidth="0.6" />
+
+        {/* Bit boundary grid ticks & center nibble split */}
+        {[1, 2, 3, 4, 5, 6, 7].map((i) => (
+          <line
+            key={i}
+            x1={i * segWidth}
+            y1="1"
+            x2={i * segWidth}
+            y2="21"
+            stroke={i === 4 ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.07)'}
+            strokeWidth={i === 4 ? '0.9' : '0.6'}
+            strokeDasharray={i === 4 ? undefined : '2 2'}
+          />
+        ))}
+
+        {/* Soft luminous under-glow */}
+        <path
+          d={d}
+          fill="none"
+          stroke="rgba(255,255,255,0.28)"
+          strokeWidth="3.2"
+          strokeLinejoin="miter"
+          filter={`url(#${filterId})`}
+        />
+
+        {/* Crisp digital square wave */}
+        <path
+          d={d}
+          fill="none"
+          stroke="#FFFFFF"
+          strokeWidth="1.4"
+          strokeLinejoin="miter"
+        />
+
+        {/* Bit-center sample points */}
+        {bits.map((bit, idx) => (
+          <circle
+            key={idx}
+            cx={idx * segWidth + segWidth / 2}
+            cy={bit === 1 ? highY : lowY}
+            r={bit === 1 ? '1.9' : '1.4'}
+            fill={bit === 1 ? '#FFFFFF' : '#4A4A4A'}
+          />
+        ))}
+      </svg>
+    </div>
+  );
+}
+
+function LedBitCell({ bitPos, bitVal, weight }) {
+  const isHigh = bitVal === 1;
+  return (
+    <div className="flex flex-col items-center">
+      <span className="mb-1 font-mono-tech text-[9px] text-neutral-500">
+        b{bitPos}
+      </span>
+      <div
+        key={`${bitPos}-${bitVal}`}
+        className={`relative flex h-11 w-full flex-col items-center justify-center rounded border font-mono-tech text-sm font-bold transition-all duration-300 ${
+          isHigh ? 'led-on animate-bit-ignite' : 'led-off'
+        }`}
+      >
+        {/* Sculpted 2px top interior filament bar */}
+        <span
+          className={`absolute top-1.5 h-[2px] w-4 rounded-full transition-all ${
+            isHigh
+              ? 'bg-white shadow-[0_0_6px_rgba(255,255,255,0.95)] ring-1 ring-black/20'
+              : 'bg-white/10'
+          }`}
+        />
+        <span className="mt-1">{bitVal}</span>
+      </div>
+      <span className="mt-1 font-mono-tech text-[8px] text-neutral-600">
+        {weight}
+      </span>
+    </div>
+  );
+}
+
 function LedBitArray({ regName, value, isChanged, roleLabel }) {
   const signedVal = toSigned8(value);
+  const highNibble = [7, 6, 5, 4];
+  const lowNibble = [3, 2, 1, 0];
+
   return (
     <div
       className={`rounded-md border p-3 transition-all duration-300 ${
         isChanged
-          ? 'border-white bg-[#131313] shadow-[0_0_22px_rgba(255,255,255,0.2)]'
+          ? 'border-white bg-[#131313] shadow-[0_0_24px_rgba(255,255,255,0.22)]'
           : 'border-white/12 bg-[#0b0b0b]'
       }`}
     >
@@ -92,40 +224,292 @@ function LedBitArray({ regName, value, isChanged, roleLabel }) {
         </div>
       </div>
 
-      {/* 8-Bit LED Bit-Cells */}
-      <div className="mt-3 grid grid-cols-8 gap-1.5">
-        {BIT_POSITIONS_DESC.map((bitPos, i) => {
-          const bitVal = (value >>> bitPos) & 1;
-          const isHigh = bitVal === 1;
-          return (
-            <div
-              key={bitPos}
-              className={`flex flex-col items-center ${i === 4 ? 'relative' : ''}`}
-            >
-              <span className="mb-1 font-mono-tech text-[9px] text-neutral-500">
-                b{bitPos}
-              </span>
-              <div
-                className={`flex h-10 w-full flex-col items-center justify-center rounded border font-mono-tech text-sm font-bold transition-all duration-300 ${
-                  isHigh
-                    ? 'border-white bg-white text-black shadow-[0_0_16px_rgba(255,255,255,0.6)]'
-                    : 'border-white/10 bg-[#070707] text-neutral-600'
-                }`}
-              >
-                <span>{bitVal}</span>
-              </div>
-              <span className="mt-1 font-mono-tech text-[8px] text-neutral-600">
-                {BIT_WEIGHTS[i]}
-              </span>
-            </div>
-          );
-        })}
+      {/* 8-Bit LED Bit-Cells with Clean Nibble Divider */}
+      <div className="mt-3 grid grid-cols-[repeat(4,minmax(0,1fr))_8px_repeat(4,minmax(0,1fr))] items-center gap-1">
+        {highNibble.map((bitPos, i) => (
+          <LedBitCell
+            key={bitPos}
+            bitPos={bitPos}
+            bitVal={(value >>> bitPos) & 1}
+            weight={BIT_WEIGHTS[i]}
+          />
+        ))}
+        <div className="flex h-11 items-center justify-center">
+          <div className="h-7 w-[1px] bg-white/18" />
+        </div>
+        {lowNibble.map((bitPos, i) => (
+          <LedBitCell
+            key={bitPos}
+            bitPos={bitPos}
+            bitVal={(value >>> bitPos) & 1}
+            weight={BIT_WEIGHTS[i + 4]}
+          />
+        ))}
       </div>
+
+      {/* Live Logic-Analyzer Square Waveform SVG */}
+      <LogicAnalyzerWaveform value={value} regName={regName} />
     </div>
   );
 }
 
-function CarryChainViewer({ gateSteps, carryBits, operandA, operandB, result, carryOut, labelB }) {
+function FullAdderSchematicSvg({ step }) {
+  if (!step) return null;
+
+  const sA = step.bitA === 1;
+  const sB = step.bitB === 1;
+  const sCin = step.carryIn === 1;
+  const sXor1 = step.xorAB === 1;
+  const sAnd1 = (step.bitA & step.bitB) === 1;
+  const sAnd2 = (step.carryIn & step.xorAB) === 1;
+  const sSum = step.sumBit === 1;
+  const sCout = step.carryOut === 1;
+
+  const wireProps = (active) =>
+    active
+      ? {
+          stroke: '#FFFFFF',
+          strokeWidth: '2.2',
+          filter: 'url(#gate-glow)',
+        }
+      : {
+          stroke: '#2E2E2E',
+          strokeWidth: '1.25',
+        };
+
+  const gates = [
+    { x: 135, y: 22, w: 63, h: 38, label: 'XOR₁', sub: 'A ^ B', active: sXor1 },
+    { x: 274, y: 14, w: 64, h: 38, label: 'XOR₂', sub: 'SUM', active: sSum },
+    { x: 274, y: 64, w: 64, h: 36, label: 'AND₂', sub: 'Cin & X', active: sAnd2 },
+    { x: 274, y: 114, w: 64, h: 36, label: 'AND₁', sub: 'A & B', active: sAnd1 },
+    { x: 406, y: 88, w: 64, h: 38, label: 'OR₁', sub: 'Cout', active: sCout },
+  ];
+
+  return (
+    <div className="rounded-md border border-white/15 bg-[#050505] p-2.5">
+      <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2 font-mono-tech text-[9px] tracking-widest text-neutral-400 uppercase">
+        <span>LIVE SILICON SCHEMATIC // FULL-ADDER BIT {step.bit}</span>
+        <span className="text-neutral-500">WHITE TRACE = 1 // GRAPHITE = 0</span>
+      </div>
+      <svg
+        viewBox="0 0 560 156"
+        className="h-auto w-full select-none"
+        role="img"
+        aria-label={`Full Adder gate schematic for bit ${step.bit}`}
+      >
+        <defs>
+          <filter id="gate-glow" x="-25%" y="-25%" width="150%" height="150%">
+            <feGaussianBlur stdDeviation="2.2" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+
+        {/* Wire: A[i] -> XOR₁ & tap down to AND₁ */}
+        <path
+          d="M 58 28 L 112 28 L 112 33 L 135 33"
+          fill="none"
+          {...wireProps(sA)}
+        />
+        <path
+          d="M 82 28 L 82 124 L 274 124"
+          fill="none"
+          {...wireProps(sA)}
+        />
+        <circle cx="82" cy="28" r="2.6" fill={sA ? '#FFFFFF' : '#3A3A3A'} />
+
+        {/* Wire: B[i] -> XOR₁ & tap down to AND₁ */}
+        <path
+          d="M 58 62 L 112 62 L 112 49 L 135 49"
+          fill="none"
+          {...wireProps(sB)}
+        />
+        <path
+          d="M 98 62 L 98 140 L 274 140"
+          fill="none"
+          {...wireProps(sB)}
+        />
+        <circle cx="98" cy="62" r="2.6" fill={sB ? '#FFFFFF' : '#3A3A3A'} />
+
+        {/* Wire: Cin -> XOR₂ & tap to AND₂ */}
+        <path
+          d="M 58 100 L 222 100 L 222 42 L 274 42"
+          fill="none"
+          {...wireProps(sCin)}
+        />
+        <path
+          d="M 222 90 L 274 90"
+          fill="none"
+          {...wireProps(sCin)}
+        />
+        <circle cx="222" cy="90" r="2.6" fill={sCin ? '#FFFFFF' : '#3A3A3A'} />
+
+        {/* Wire: X (XOR₁ out) -> XOR₂ & tap to AND₂ */}
+        <path
+          d="M 198 41 L 236 41 L 236 24 L 274 24"
+          fill="none"
+          {...wireProps(sXor1)}
+        />
+        <path
+          d="M 236 41 L 236 74 L 274 74"
+          fill="none"
+          {...wireProps(sXor1)}
+        />
+        <circle cx="236" cy="41" r="2.6" fill={sXor1 ? '#FFFFFF' : '#3A3A3A'} />
+
+        {/* Wire: AND₂ out -> OR₁ */}
+        <path
+          d="M 338 82 L 372 82 L 372 98 L 406 98"
+          fill="none"
+          {...wireProps(sAnd2)}
+        />
+
+        {/* Wire: AND₁ out -> OR₁ */}
+        <path
+          d="M 338 132 L 372 132 L 372 116 L 406 116"
+          fill="none"
+          {...wireProps(sAnd1)}
+        />
+
+        {/* Wire: XOR₂ out -> SUM output */}
+        <line x1="338" y1="33" x2="496" y2="33" {...wireProps(sSum)} />
+
+        {/* Wire: OR₁ out -> Cout output */}
+        <line x1="470" y1="107" x2="496" y2="107" {...wireProps(sCout)} />
+
+        {/* Input Nodes */}
+        {[
+          { y: 16, label: `A${step.bit}`, val: step.bitA, active: sA },
+          { y: 50, label: `B${step.bit}`, val: step.bitB, active: sB },
+          { y: 88, label: 'Cin', val: step.carryIn, active: sCin },
+        ].map((inp) => (
+          <g key={inp.label}>
+            <rect
+              x="6"
+              y={inp.y}
+              width="52"
+              height="24"
+              rx="3"
+              fill={inp.active ? '#FFFFFF' : '#0B0B0B'}
+              stroke={inp.active ? '#FFFFFF' : 'rgba(255,255,255,0.2)'}
+              strokeWidth="1"
+            />
+            <text
+              x="21"
+              y={inp.y + 15}
+              textAnchor="middle"
+              className="font-mono-tech"
+              fontSize="9"
+              fontWeight="700"
+              fill={inp.active ? '#000000' : '#999999'}
+            >
+              {inp.label}
+            </text>
+            <text
+              x="46"
+              y={inp.y + 15}
+              textAnchor="middle"
+              className="font-mono-tech"
+              fontSize="10"
+              fontWeight="700"
+              fill={inp.active ? '#000000' : '#666666'}
+            >
+              {inp.val}
+            </text>
+          </g>
+        ))}
+
+        {/* Logic Gate Blocks */}
+        {gates.map((g) => (
+          <g
+            key={g.label}
+            filter={g.active ? 'url(#gate-glow)' : undefined}
+          >
+            <rect
+              x={g.x}
+              y={g.y}
+              width={g.w}
+              height={g.h}
+              rx="4"
+              fill={g.active ? '#161616' : '#090909'}
+              stroke={g.active ? '#FFFFFF' : 'rgba(255,255,255,0.18)'}
+              strokeWidth={g.active ? '1.5' : '1'}
+            />
+            <text
+              x={g.x + g.w / 2}
+              y={g.y + 15}
+              textAnchor="middle"
+              className="font-mono-tech"
+              fontSize="9.5"
+              fontWeight="700"
+              fill={g.active ? '#FFFFFF' : '#888888'}
+            >
+              {g.label}
+            </text>
+            <text
+              x={g.x + g.w / 2}
+              y={g.y + 27}
+              textAnchor="middle"
+              className="font-mono-tech"
+              fontSize="7.2"
+              fill={g.active ? '#D4D4D4' : '#555555'}
+            >
+              {g.sub} · {g.active ? '1' : '0'}
+            </text>
+          </g>
+        ))}
+
+        {/* Output Nodes */}
+        {[
+          { y: 20, label: `S${step.bit}`, val: step.sumBit, active: sSum },
+          { y: 94, label: 'Cout', val: step.carryOut, active: sCout },
+        ].map((out) => (
+          <g
+            key={out.label}
+            filter={out.active ? 'url(#gate-glow)' : undefined}
+          >
+            <rect
+              x="496"
+              y={out.y}
+              width="58"
+              height="26"
+              rx="3"
+              fill={out.active ? '#FFFFFF' : '#0B0B0B'}
+              stroke={out.active ? '#FFFFFF' : 'rgba(255,255,255,0.22)'}
+              strokeWidth="1.2"
+            />
+            <text
+              x="514"
+              y={out.y + 16.5}
+              textAnchor="middle"
+              className="font-mono-tech"
+              fontSize="9"
+              fontWeight="700"
+              fill={out.active ? '#000000' : '#999999'}
+            >
+              {out.label}
+            </text>
+            <text
+              x="541"
+              y={out.y + 16.5}
+              textAnchor="middle"
+              className="font-mono-tech"
+              fontSize="10.5"
+              fontWeight="700"
+              fill={out.active ? '#000000' : '#666666'}
+            >
+              {out.val}
+            </text>
+          </g>
+        ))}
+      </svg>
+    </div>
+  );
+}
+
+function CarryChainViewer({ gateSteps, operandA, operandB, result, carryOut, labelB }) {
   const [selectedBit, setSelectedBit] = useState(0);
 
   useEffect(() => {
@@ -139,7 +523,7 @@ function CarryChainViewer({ gateSteps, carryBits, operandA, operandB, result, ca
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2 font-mono-tech text-[10px] text-neutral-400">
-        <span className="flex items-center gap-1.5 uppercase tracking-wider">
+        <span className="flex items-center gap-1.5 tracking-wider uppercase">
           <ArrowLeft className="h-3 w-3 text-white" />
           <span>Carry Propagation Chain (Bit 0 &rarr; Bit 7)</span>
         </span>
@@ -164,7 +548,7 @@ function CarryChainViewer({ gateSteps, carryBits, operandA, operandB, result, ca
                 onClick={() => setSelectedBit(s.bit)}
                 className={`cursor-pointer rounded py-0.5 transition ${
                   selectedBit === s.bit
-                    ? 'bg-white font-bold text-black'
+                    ? 'bg-white font-bold text-black shadow-[0_0_10px_rgba(255,255,255,0.45)]'
                     : 'hover:bg-white/10 hover:text-white'
                 }`}
               >
@@ -235,7 +619,11 @@ function CarryChainViewer({ gateSteps, carryBits, operandA, operandB, result, ca
                   s.sumBit === 1
                     ? 'bg-white text-black shadow-[0_0_10px_rgba(255,255,255,0.45)]'
                     : 'bg-[#0e0e0e] text-neutral-500'
-                } ${selectedBit === s.bit ? 'ring-1 ring-white ring-offset-1 ring-offset-black' : ''}`}
+                } ${
+                  selectedBit === s.bit
+                    ? 'ring-1 ring-white ring-offset-1 ring-offset-black'
+                    : ''
+                }`}
               >
                 {s.sumBit}
               </div>
@@ -243,6 +631,9 @@ function CarryChainViewer({ gateSteps, carryBits, operandA, operandB, result, ca
           </div>
         </div>
       </div>
+
+      {/* Live Glowing-Wire Full-Adder Logic-Gate Circuit Schematic */}
+      <FullAdderSchematicSvg step={activeStep} />
 
       {/* Selected Full-Adder Gate Equation Inspector */}
       {activeStep && (
@@ -252,7 +643,7 @@ function CarryChainViewer({ gateSteps, carryBits, operandA, operandB, result, ca
               FULL ADDER GATE // BIT {activeStep.bit}
             </span>
             <span className="text-[10px] text-neutral-400">
-              Click any bit column (b0–b7) to inspect
+              Click any bit column (b0–b7) to energize gate wires
             </span>
           </div>
           <div className="mt-2 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
@@ -309,7 +700,7 @@ export default function CpuCorePanel({
   const flagKeys = ['ZF', 'SF', 'CF', 'OF'];
 
   return (
-    <section className="hw-panel flex flex-col rounded-lg">
+    <section className="hw-panel hw-reticle flex flex-col rounded-lg">
       {/* Panel Header */}
       <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
         <div className="flex items-center gap-2">
@@ -411,7 +802,7 @@ export default function CpuCorePanel({
                   <div
                     className={`flex w-full cursor-help items-center justify-between rounded-md border px-3 py-2 transition-all duration-300 ${
                       active
-                        ? 'border-white bg-white/12 shadow-[0_0_16px_rgba(255,255,255,0.22)]'
+                        ? 'border-white bg-white/12 shadow-[0_0_16px_rgba(255,255,255,0.24)]'
                         : 'border-white/10 bg-black'
                     } ${updated && active ? 'ring-1 ring-white/80' : ''}`}
                   >
@@ -485,7 +876,6 @@ export default function CpuCorePanel({
           {aluTrace?.type === 'ADD' && (
             <CarryChainViewer
               gateSteps={aluTrace.gateSteps}
-              carryBits={aluTrace.carryBits}
               operandA={aluTrace.operandA}
               operandB={aluTrace.operandB}
               result={aluTrace.result}
@@ -534,7 +924,6 @@ export default function CpuCorePanel({
 
               <CarryChainViewer
                 gateSteps={aluTrace.gateSteps}
-                carryBits={aluTrace.carryBits}
                 operandA={aluTrace.operandA}
                 operandB={aluTrace.steps.twosComplementB}
                 result={aluTrace.result}

@@ -1,17 +1,11 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import {
-  AlertOctagon,
-  Check,
-  ChevronRight,
-  RotateCcw,
-  Radio,
-} from 'lucide-react';
+import { AlertOctagon, RotateCcw } from 'lucide-react';
 import {
   MiniOSKernel,
-  PIPELINE_STAGES,
   parseExpression,
 } from './hardware/cpuAndRam.js';
 import TopHeader from './components/TopHeader.jsx';
+import BusArchitectureRibbon from './components/BusArchitectureRibbon.jsx';
 import UserShellPanel from './components/UserShellPanel.jsx';
 import CpuCorePanel from './components/CpuCorePanel.jsx';
 import RamGridPanel from './components/RamGridPanel.jsx';
@@ -89,6 +83,26 @@ export default function App() {
     setValidationError('');
   }, []);
 
+  // Global hardware debugger keyboard shortcuts (Space = Step, R = Reset)
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      const tag = e.target?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+      if (e.code === 'Space') {
+        e.preventDefault();
+        handleStep();
+      } else if (e.key === 'r' || e.key === 'R') {
+        e.preventDefault();
+        handleReset();
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [handleStep, handleReset]);
+
   // Clocked Auto-Play timer
   useEffect(() => {
     if (!isAutoPlaying) return undefined;
@@ -109,8 +123,6 @@ export default function App() {
     return () => window.clearTimeout(timer);
   }, [isAutoPlaying, snapshot.clockCycle, snapshot.canStep, clockSpeedMs]);
 
-  const isFaulted = snapshot.pcb.state === 'FAULT';
-
   return (
     <div className="flex min-h-screen flex-col text-white">
       {/* Top Architecture Header & Controls */}
@@ -128,114 +140,15 @@ export default function App() {
       />
 
       <main className="mx-auto flex w-full max-w-[1680px] flex-1 flex-col gap-4 px-4 py-4 sm:px-6">
-        {/* 5-Stage Clocked Execution Pipeline Ribbon */}
-        <section
-          aria-label="5-Stage Clocked Execution Pipeline"
-          className="hw-panel rounded-lg px-4 py-3"
-        >
-          <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2 font-mono-tech text-[10px] font-semibold tracking-[0.18em] text-neutral-300 uppercase">
-              <Radio
-                className={`h-3.5 w-3.5 ${
-                  snapshot.pcb.state === 'RUNNING'
-                    ? 'animate-pulse text-white'
-                    : 'text-neutral-500'
-                }`}
-              />
-              <span>5-Stage Clocked Execution Pipeline</span>
-            </div>
-            <div className="font-mono-tech text-[11px] text-neutral-400">
-              {snapshot.activeInstruction ? (
-                <span>
-                  ACTIVE JOB:{' '}
-                  <strong className="text-white">
-                    {snapshot.activeInstruction.expression}
-                  </strong>{' '}
-                  <span className="text-neutral-500">
-                    ({snapshot.activeInstruction.mnemonic})
-                  </span>
-                </span>
-              ) : (
-                <span>PIPELINE IDLE // SELECT A PRESET OR EXECUTE AN INSTRUCTION</span>
-              )}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-5">
-            {PIPELINE_STAGES.map((st, idx) => {
-              const isCurrent = snapshot.stage === st.id;
-              const isCompleted =
-                snapshot.stage > st.id ||
-                (snapshot.stage === 5 && st.id === 5 && snapshot.pcb.state === 'TERMINATED');
-              const isStageFault = isCurrent && isFaulted;
-
-              return (
-                <div key={st.id} className="relative flex items-center">
-                  <div
-                    className={`flex w-full items-center gap-2.5 rounded-md border px-3 py-2 transition-all duration-300 ${
-                      isStageFault
-                        ? 'border-white bg-white text-black shadow-[0_0_24px_rgba(255,255,255,0.45)]'
-                        : isCurrent
-                        ? 'animate-hw-pulse border-white bg-[#171717] text-white'
-                        : isCompleted
-                        ? 'border-white/30 bg-[#101010] text-neutral-200'
-                        : 'border-white/10 bg-[#080808] text-neutral-600'
-                    }`}
-                  >
-                    <div
-                      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded font-mono-tech text-[11px] font-bold ${
-                        isStageFault
-                          ? 'bg-black text-white'
-                          : isCurrent
-                          ? 'bg-white text-black'
-                          : isCompleted
-                          ? 'border border-white/40 bg-white/15 text-white'
-                          : 'border border-white/10 bg-black text-neutral-600'
-                      }`}
-                    >
-                      {isStageFault ? (
-                        '!'
-                      ) : isCompleted && !isCurrent ? (
-                        <Check className="h-3.5 w-3.5" />
-                      ) : (
-                        st.id
-                      )}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span
-                          className={`truncate font-mono-tech text-[11px] font-bold tracking-wide ${
-                            isStageFault
-                              ? 'text-black'
-                              : isCurrent || isCompleted
-                              ? 'text-white'
-                              : 'text-neutral-500'
-                          }`}
-                        >
-                          {st.short}
-                        </span>
-                      </div>
-                      <div
-                        className={`truncate font-mono-tech text-[9px] ${
-                          isStageFault
-                            ? 'text-black/80'
-                            : isCurrent
-                            ? 'text-neutral-300'
-                            : 'text-neutral-500'
-                        }`}
-                      >
-                        {st.subtitle}
-                      </div>
-                    </div>
-                  </div>
-                  {idx < PIPELINE_STAGES.length - 1 && (
-                    <ChevronRight className="hidden h-4 w-4 shrink-0 text-neutral-700 sm:block" />
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </section>
+        {/* Live SVG Silicon Bus Topology & 5-Stage Clocked Execution Pipeline */}
+        <BusArchitectureRibbon
+          stage={snapshot.stage}
+          pcb={snapshot.pcb}
+          registers={snapshot.registers}
+          activeInstruction={snapshot.activeInstruction}
+          fault={snapshot.fault}
+          ramActivity={snapshot.ramActivity}
+        />
 
         {/* Global Monochrome Hardware Exception Banner */}
         {snapshot.fault && (
@@ -328,7 +241,7 @@ export default function App() {
             PURE BITWISE 8-BIT ALU (XOR / AND / OR / NOT / SHIFTS) &bull; ZERO NATIVE + - * / OPERATORS
           </span>
           <span>
-            DATA 0x00–0x02 &bull; CODE 0x10–0xEF &bull; STACK 0xFF
+            DATA 0x00–0x02 &bull; CODE 0x10–0xEF &bull; STACK 0xFF &bull; SHORTCUTS: [SPACE] STEP / [R] RESET
           </span>
         </div>
       </footer>

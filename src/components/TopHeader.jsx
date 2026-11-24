@@ -35,12 +35,25 @@ export default function TopHeader({
   const hz = (1000 / clockSpeedMs).toFixed(1);
 
   return (
-    <header className="sticky top-0 z-30 border-b border-white/12 bg-[#060606]/90 backdrop-blur-md">
+    <header className="sticky top-0 z-30 border-b border-white/12 bg-[#050505]/92 backdrop-blur-xl">
+      {/* Top 2px Hardware Privilege Energy Beam */}
+      <div
+        className={`h-[2px] w-full transition-all duration-500 ${
+          isKernelMode ? 'kernel-beam' : 'bg-white/10'
+        }`}
+      />
+
       <div className="mx-auto max-w-[1680px] px-4 py-3 sm:px-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           {/* Brand & Architecture Title */}
           <div className="flex items-center gap-3.5">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-white/25 bg-white text-black shadow-[0_0_18px_rgba(255,255,255,0.22)]">
+            <div
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-md border transition-all duration-300 ${
+                isKernelMode
+                  ? 'border-white bg-white text-black shadow-[0_0_24px_rgba(255,255,255,0.45)]'
+                  : 'border-white/30 bg-white text-black shadow-[0_0_18px_rgba(255,255,255,0.2)]'
+              }`}
+            >
               <Cpu className="h-5 w-5 stroke-[2.2]" />
             </div>
             <div>
@@ -55,41 +68,51 @@ export default function TopHeader({
             </div>
           </div>
 
-          {/* Live Telemetry Badges: Privilege Ring & PCB Status */}
+          {/* Live Telemetry Badges: 2-Pole Privilege Ring Switcher & PCB Status */}
           <div className="flex flex-wrap items-center gap-2.5">
-            {/* Privilege Ring Switcher Badge */}
+            {/* Tactile 2-Pole Privilege Ring Switcher Housing */}
             <div
-              className={`flex items-center gap-2 rounded-md px-3 py-1.5 font-mono-tech text-xs font-semibold tracking-wider transition-all duration-300 ${
-                isKernelMode
-                  ? 'border border-white bg-white text-black shadow-[0_0_24px_rgba(255,255,255,0.42)]'
-                  : 'border border-white/25 bg-[#0e0e0e] text-neutral-200'
-              }`}
+              role="status"
+              aria-label={isKernelMode ? 'RING 0: KERNEL MODE' : 'RING 3: USER MODE'}
               title={
                 isKernelMode
                   ? 'CPU executing privileged kernel instructions in Ring 0'
                   : 'CPU executing unprivileged shell code in Ring 3'
               }
+              className="flex items-center rounded-md border border-white/20 bg-[#070707] p-0.5 font-mono-tech text-[11px] font-semibold tracking-wider shadow-[inset_0_1px_4px_rgba(0,0,0,0.8)]"
             >
-              {isKernelMode ? (
-                <ShieldAlert className="h-3.5 w-3.5 stroke-[2.4]" />
-              ) : (
-                <Shield className="h-3.5 w-3.5 text-neutral-300" />
-              )}
-              <span
-                className={`h-1.5 w-1.5 rounded-full ${
-                  isKernelMode ? 'animate-ping bg-black' : 'bg-white/70'
+              <div
+                className={`flex items-center gap-1.5 rounded-[4px] px-2.5 py-1 transition-all duration-300 ${
+                  !isKernelMode
+                    ? 'bg-white text-black shadow-[0_0_20px_rgba(255,255,255,0.4)]'
+                    : 'text-neutral-500'
                 }`}
-              />
-              <span>{isKernelMode ? 'RING 0: KERNEL MODE' : 'RING 3: USER MODE'}</span>
+              >
+                <Shield className="h-3 w-3 stroke-[2.2]" />
+                <span>RING 3: USER</span>
+              </div>
+              <div
+                className={`flex items-center gap-1.5 rounded-[4px] px-2.5 py-1 transition-all duration-300 ${
+                  isKernelMode
+                    ? 'bg-white text-black shadow-[0_0_22px_rgba(255,255,255,0.5)]'
+                    : 'text-neutral-500'
+                }`}
+              >
+                <ShieldAlert className="h-3 w-3 stroke-[2.3]" />
+                {isKernelMode && (
+                  <span className="h-1.5 w-1.5 animate-ping rounded-full bg-black" />
+                )}
+                <span>RING 0: KERNEL</span>
+              </div>
             </div>
 
             {/* Live PCB Status Pill */}
             <div
               className={`flex items-center gap-2 rounded-md border px-3 py-1.5 font-mono-tech text-xs transition-all duration-300 ${
                 isFault
-                  ? 'border-white bg-black text-white shadow-[0_0_16px_rgba(255,255,255,0.3)]'
+                  ? 'border-white bg-black text-white shadow-[0_0_18px_rgba(255,255,255,0.34)]'
                   : isRunning
-                  ? 'border-white/50 bg-white/10 text-white'
+                  ? 'border-white/55 bg-white/10 text-white'
                   : isTerminated
                   ? 'border-white/30 bg-[#121212] text-neutral-200'
                   : 'border-white/15 bg-[#0b0b0b] text-neutral-400'
@@ -126,8 +149,15 @@ export default function TopHeader({
               </span>
             </div>
 
-            {/* Clock Cycle Counter */}
-            <div className="hidden items-center gap-1.5 rounded-md border border-white/12 bg-[#0b0b0b] px-2.5 py-1.5 font-mono-tech text-xs text-neutral-400 xl:flex">
+            {/* Clock Cycle Counter with Auto-Play Live Pulse Dot */}
+            <div className="hidden items-center gap-2 rounded-md border border-white/15 bg-[#0a0a0a] px-2.5 py-1.5 font-mono-tech text-xs text-neutral-400 xl:flex">
+              <span
+                className={`h-1.5 w-1.5 rounded-full transition-all ${
+                  isAutoPlaying
+                    ? 'animate-ping bg-white shadow-[0_0_8px_#fff]'
+                    : 'bg-white/25'
+                }`}
+              />
               <span>CLK</span>
               <span className="font-semibold text-white">
                 #{String(clockCycle).padStart(3, '0')}
@@ -144,7 +174,7 @@ export default function TopHeader({
               type="button"
               onClick={onExecute}
               disabled={!canExecute}
-              className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-white bg-white px-3.5 py-1.5 font-mono-tech text-xs font-semibold tracking-wide text-black transition hover:bg-neutral-200 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-white bg-white px-3.5 py-1.5 font-mono-tech text-xs font-semibold tracking-wide text-black shadow-[0_0_16px_rgba(255,255,255,0.18)] transition hover:bg-neutral-200 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
             >
               <Zap className="h-3.5 w-3.5 fill-black" />
               <span>EXECUTE</span>
@@ -155,10 +185,14 @@ export default function TopHeader({
               type="button"
               onClick={onStep}
               disabled={!canExecute}
-              className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-white/25 bg-[#121212] px-3.5 py-1.5 font-mono-tech text-xs font-medium tracking-wide text-white transition hover:border-white/60 hover:bg-[#1a1a1a] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+              title="Step one pipeline stage (Shortcut: Space)"
+              className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-white/25 bg-[#121212] px-3 py-1.5 font-mono-tech text-xs font-medium tracking-wide text-white transition hover:border-white/60 hover:bg-[#1a1a1a] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
             >
               <StepForward className="h-3.5 w-3.5" />
               <span>STEP CLOCK CYCLE</span>
+              <kbd className="hidden rounded border border-white/20 bg-black px-1.5 py-0.5 text-[9px] font-semibold tracking-widest text-neutral-400 sm:inline-block">
+                SPC
+              </kbd>
             </button>
 
             {/* Auto-Play Toggle */}
@@ -168,7 +202,7 @@ export default function TopHeader({
               disabled={!canExecute}
               className={`inline-flex cursor-pointer items-center gap-1.5 rounded-md border px-3.5 py-1.5 font-mono-tech text-xs font-medium tracking-wide transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 ${
                 isAutoPlaying
-                  ? 'border-white bg-white/15 text-white shadow-[0_0_14px_rgba(255,255,255,0.22)]'
+                  ? 'border-white bg-white/15 text-white shadow-[0_0_16px_rgba(255,255,255,0.25)]'
                   : 'border-white/20 bg-[#0d0d0d] text-neutral-300 hover:border-white/45 hover:text-white'
               }`}
             >
@@ -189,10 +223,14 @@ export default function TopHeader({
             <button
               type="button"
               onClick={onReset}
-              className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-white/15 bg-transparent px-3 py-1.5 font-mono-tech text-xs font-medium tracking-wide text-neutral-400 transition hover:border-white/40 hover:bg-white/5 hover:text-white active:scale-[0.98]"
+              title="Reset CPU, RAM, and Kernel state (Shortcut: R)"
+              className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-white/15 bg-transparent px-3 py-1.5 font-mono-tech text-xs font-medium tracking-wide text-neutral-400 transition hover:border-white/40 hover:bg-white/5 hover:text-white active:scale-[0.98]"
             >
               <RotateCcw className="h-3.5 w-3.5" />
               <span>RESET</span>
+              <kbd className="hidden rounded border border-white/15 bg-black px-1.5 py-0.5 text-[9px] font-semibold tracking-widest text-neutral-500 sm:inline-block">
+                R
+              </kbd>
             </button>
           </div>
 
